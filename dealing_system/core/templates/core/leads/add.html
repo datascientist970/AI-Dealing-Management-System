@@ -1,0 +1,310 @@
+{% extends 'core/layouts/base.html' %}
+
+{% block page_icon %}user-plus{% endblock %}
+{% block page_title %}Add New Lead{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-sm fade-in">
+            <div class="card-header bg-white py-3">
+                <h6 class="m-0 fw-bold text-primary">
+                    <i class="fas fa-plus-circle me-2"></i>Lead Information
+                </h6>
+                <small class="text-muted">Fill in the details below to add a new lead</small>
+            </div>
+            <div class="card-body">
+                <form method="POST" class="needs-validation" novalidate>
+                    {% csrf_token %}
+                    
+                    <!-- Personal Information -->
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">
+                                <i class="fas fa-user me-1 text-primary"></i>Full Name <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" name="name" class="form-control form-control-lg" required 
+                                   placeholder="Enter full name" id="leadName">
+                            <div class="invalid-feedback">Please enter lead name</div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">
+                                <i class="fas fa-phone me-1 text-success"></i>Phone Number <span class="text-danger">*</span>
+                            </label>
+                            <input type="tel" name="phone" class="form-control form-control-lg" required 
+                                   placeholder="0300-1234567" id="leadPhone">
+                            <div class="invalid-feedback">Please enter valid phone number</div>
+                            <small class="text-muted">Enter with country code or without (e.g., 0300-1234567)</small>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">
+                                <i class="fas fa-envelope me-1 text-info"></i>Email
+                            </label>
+                            <input type="email" name="email" class="form-control" 
+                                   placeholder="email@example.com" id="leadEmail">
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">
+                                <i class="fas fa-building me-1 text-warning"></i>Company
+                            </label>
+                            <input type="text" name="company" class="form-control" 
+                                   placeholder="Company name" id="leadCompany">
+                        </div>
+                    </div>
+                    
+                    <!-- Lead Details -->
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">
+                                <i class="fas fa-tag me-1 text-secondary"></i>Source
+                            </label>
+                            <select name="source" class="form-select" id="leadSource">
+                                <option value="">Select source</option>
+                                <option value="Website">🌐 Website</option>
+                                <option value="Facebook">📘 Facebook</option>
+                                <option value="LinkedIn">🔗 LinkedIn</option>
+                                <option value="WhatsApp">💬 WhatsApp</option>
+                                <option value="Referral">🤝 Referral</option>
+                                <option value="Cold Call">📞 Cold Call</option>
+                                <option value="Email">✉️ Email</option>
+                                <option value="Other">📌 Other</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">
+                                <i class="fas fa-flag me-1 text-danger"></i>Status
+                            </label>
+                            <select name="status" class="form-select" id="leadStatus">
+                                <option value="new">🆕 New Lead</option>
+                                <option value="contacted">📞 Contacted</option>
+                                <option value="qualified">⭐ Qualified</option>
+                                <option value="converted">✅ Converted</option>
+                                <option value="lost">❌ Lost</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">
+                            <i class="fas fa-sticky-note me-1 text-warning"></i>Notes
+                        </label>
+                        <textarea name="notes" class="form-control" rows="3" 
+                                  placeholder="Any additional information about this lead..." id="leadNotes"></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">
+                            <i class="fas fa-user-tie me-1 text-primary"></i>Assign To
+                        </label>
+                        <select name="assigned_to" class="form-select">
+                            <option value="">Unassigned</option>
+                            {% for user in users %}
+                                <option value="{{ user.id }}">{{ user.username }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <hr>
+                    
+                    <!-- 🤖 Auto AI + WhatsApp Section -->
+                    <div class="bg-light p-4 rounded-3 mb-3">
+                        <h6 class="fw-bold text-primary mb-3">
+                            <i class="fas fa-robot me-2"></i>AI Auto-Processing
+                            <span class="badge bg-success ms-2">New Feature</span>
+                        </h6>
+                        
+                        <div class="form-check form-switch mb-2">
+                            <input type="checkbox" name="auto_send" class="form-check-input" id="autoSend" checked>
+                            <label class="form-check-label fw-bold" for="autoSend">
+                                <i class="fas fa-check-circle text-success me-1"></i>
+                                Enable AI Auto-Analysis & WhatsApp Message
+                            </label>
+                        </div>
+                        
+                        <div class="ms-4" id="autoDetails">
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <div class="bg-white p-2 rounded border">
+                                        <small class="text-muted d-block">
+                                            <i class="fas fa-brain text-primary me-1"></i>
+                                            AI Analysis
+                                        </small>
+                                        <span class="badge bg-primary">Auto</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="bg-white p-2 rounded border">
+                                        <small class="text-muted d-block">
+                                            <i class="fab fa-whatsapp text-success me-1"></i>
+                                            WhatsApp Send
+                                        </small>
+                                        <span class="badge bg-success">Auto</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <small class="text-muted">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    AI will analyze lead data, generate personalized message, and send via WhatsApp automatically
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="d-flex gap-2 flex-wrap mt-3">
+                        <button type="submit" class="btn btn-success-custom btn-lg px-5" id="submitBtn">
+                            <i class="fas fa-save me-2"></i>Save & Process
+                        </button>
+                        <button type="reset" class="btn btn-outline-secondary btn-lg px-4">
+                            <i class="fas fa-undo me-2"></i>Reset
+                        </button>
+                        <a href="{% url 'lead_list' %}" class="btn btn-outline-secondary btn-lg px-4">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- AI Quick Tips -->
+        <div class="alert alert-info mt-4 border-0 shadow-sm fade-in">
+            <div class="d-flex">
+                <div class="me-3">
+                    <i class="fas fa-robot fa-2x text-primary"></i>
+                </div>
+                <div>
+                    <h6 class="fw-bold mb-1">🤖 AI Assistant is Ready!</h6>
+                    <p class="mb-0 small">
+                        When you add a lead, the AI will automatically:
+                        <br>
+                        <span class="badge bg-primary">1</span> Analyze lead data (name, company, source, notes)
+                        <br>
+                        <span class="badge bg-success">2</span> Generate a personalized WhatsApp message
+                        <br>
+                        <span class="badge bg-warning">3</span> Send the message via WhatsApp Web
+                        <br>
+                        <span class="badge bg-info">4</span> Save everything in your database
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- WhatsApp Setup Reminder -->
+        <div class="alert alert-warning border-0 shadow-sm" id="whatsappReminder">
+            <div class="d-flex">
+                <div class="me-3">
+                    <i class="fab fa-whatsapp fa-2x text-success"></i>
+                </div>
+                <div>
+                    <h6 class="fw-bold mb-1">📱 WhatsApp Web Required</h6>
+                    <p class="mb-0 small">
+                        For auto-messaging to work, you need to set up WhatsApp Web first.
+                        <a href="{% url 'whatsapp_setup' %}" class="fw-bold">Click here to setup</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Bootstrap form validation
+(function() {
+    'use strict';
+    const forms = document.querySelectorAll('.needs-validation');
+    Array.from(forms).forEach(form => {
+        form.addEventListener('submit', event => {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            form.classList.add('was-validated');
+            
+            // Show processing message
+            if (form.checkValidity()) {
+                const btn = document.getElementById('submitBtn');
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
+                btn.disabled = true;
+            }
+        }, false);
+    });
+})();
+
+// Auto Send toggle - show/hide details
+document.getElementById('autoSend')?.addEventListener('change', function() {
+    const details = document.getElementById('autoDetails');
+    if (this.checked) {
+        details.style.display = 'block';
+    } else {
+        details.style.display = 'none';
+    }
+});
+
+// Phone number formatting
+document.getElementById('leadPhone')?.addEventListener('input', function() {
+    // Remove any non-digit characters except +
+    this.value = this.value.replace(/[^0-9+]/g, '');
+});
+
+// Name auto-capitalization
+document.getElementById('leadName')?.addEventListener('blur', function() {
+    if (this.value) {
+        this.value = this.value.split(' ')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+            .join(' ');
+    }
+});
+
+// Check WhatsApp status on load
+document.addEventListener('DOMContentLoaded', function() {
+    fetch('/whatsapp/status/')
+        .then(response => response.json())
+        .then(data => {
+            const reminder = document.getElementById('whatsappReminder');
+            if (data.connected) {
+                reminder.style.display = 'none';
+            } else {
+                reminder.style.display = 'block';
+            }
+        })
+        .catch(() => {});
+});
+
+// Preview - Show what will happen
+document.querySelector('form')?.addEventListener('change', function() {
+    const autoSend = document.getElementById('autoSend').checked;
+    const name = document.getElementById('leadName').value || '[Lead Name]';
+    const status = document.getElementById('leadStatus').value;
+    const source = document.getElementById('leadSource').value || 'Unknown';
+    
+    if (autoSend) {
+        console.log(`🤖 AI will process: ${name} (${status}) from ${source}`);
+    }
+});
+</script>
+
+<style>
+/* Custom styles for add page */
+.form-control:focus, .form-select:focus {
+    border-color: #4e73df;
+    box-shadow: 0 0 0 0.2rem rgba(78, 115, 223, 0.25);
+}
+
+.btn-success-custom {
+    background: linear-gradient(135deg, #1cc88a 0%, #13855c 100%);
+}
+
+.btn-success-custom:hover {
+    background: linear-gradient(135deg, #17a673 0%, #0e6b48 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(28, 200, 138, 0.4);
+}
+</style>
+{% endblock %}

@@ -1,0 +1,88 @@
+{% extends 'core/layouts/base.html' %}
+
+{% block page_icon %}file-import{% endblock %}
+{% block page_title %}Import Leads from Excel{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white py-3">
+                <h6 class="m-0 fw-bold text-primary">
+                    <i class="fas fa-file-excel me-2"></i>Import Leads
+                </h6>
+            </div>
+            <div class="card-body">
+                <!-- Instructions -->
+                <div class="alert alert-info">
+                    <h6><i class="fas fa-info-circle me-2"></i>Instructions</h6>
+                    <ul class="mb-0">
+                        <li>Upload an Excel file (.xlsx) or CSV file</li>
+                        <li>Compatible with <strong>Apollo.io</strong> exports</li>
+                        <li>Required columns: <strong>First Name</strong>, <strong>Email</strong>, <strong>Corporate Phone</strong></li>
+                        <li>Leads without phone numbers will be <strong>skipped</strong></li>
+                        <li>Duplicate emails/phones will be <strong>skipped</strong></li>
+                    </ul>
+                </div>
+                
+                <!-- Apollo Format Info -->
+                <div class="alert alert-success">
+                    <h6><i class="fas fa-rocket me-2"></i>Apollo.io Compatible</h6>
+                    <p class="mb-0 small">This importer supports Apollo.io export format. It will automatically:</p>
+                    <ul class="mb-0 small">
+                        <li>✅ Extract First Name + Last Name</li>
+                        <li>✅ Filter leads with valid phone numbers</li>
+                        <li>✅ Remove duplicate entries</li>
+                        <li>✅ Add notes with Title, Department, Seniority, Tech Stack</li>
+                        <li>✅ Auto-status based on Seniority (C-Suite → Qualified)</li>
+                    </ul>
+                </div>
+                
+                <form method="POST" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Select Excel/CSV File</label>
+                        <input type="file" name="excel_file" class="form-control form-control-lg" 
+                               accept=".xlsx,.xls,.csv" required>
+                        <small class="text-muted">Maximum file size: 10MB</small>
+                    </div>
+                    
+                    <div class="d-flex gap-3 flex-wrap">
+                        <button type="submit" class="btn btn-success-custom btn-lg px-5">
+                            <i class="fas fa-upload me-2"></i>Import Leads
+                        </button>
+                        <a href="{% url 'download_sample_excel' %}" class="btn btn-info btn-lg px-5">
+                            <i class="fas fa-download me-2"></i>Download Template
+                        </a>
+                        <a href="{% url 'lead_list' %}" class="btn btn-outline-secondary btn-lg px-5">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- AI Suggestion -->
+        <div class="card shadow-sm mt-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+            <div class="card-body">
+                <div class="d-flex align-items-start">
+                    <i class="fas fa-robot fa-2x me-3"></i>
+                    <div>
+                        <h6 class="fw-bold">🤖 AI Auto-Processing</h6>
+                        <p class="mb-0 small">
+                            After import, AI will automatically:
+                            <br>
+                            <span class="badge bg-light text-dark">1</span> Analyze each lead's data
+                            <br>
+                            <span class="badge bg-light text-dark">2</span> Generate personalized messages
+                            <br>
+                            <span class="badge bg-light text-dark">3</span> Send WhatsApp messages
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

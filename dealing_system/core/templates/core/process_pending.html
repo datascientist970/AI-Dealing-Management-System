@@ -1,0 +1,55 @@
+{% extends 'core/layouts/base.html' %}
+
+{% block page_icon %}clock{% endblock %}
+{% block page_title %}Process Pending Leads{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white py-3">
+                <h6 class="m-0 fw-bold text-primary">
+                    <i class="fas fa-robot me-2"></i>Auto Process Pending Leads
+                </h6>
+            </div>
+            <div class="card-body text-center py-5">
+                {% if pending_count > 0 %}
+                    <div class="mb-4">
+                        <i class="fas fa-clock text-warning" style="font-size: 4rem;"></i>
+                    </div>
+                    <h4>{{ pending_count }} Leads Pending Processing</h4>
+                    <p class="text-muted">AI will analyze each lead and send personalized WhatsApp messages</p>
+                    
+                    <div class="alert alert-info mt-3">
+                        <i class="fas fa-info-circle me-2"></i>
+                        This process will:
+                        <ul class="text-start mt-2">
+                            <li>📊 Analyze each lead's data</li>
+                            <li>🤖 Generate personalized messages</li>
+                            <li>📱 Send WhatsApp messages automatically</li>
+                            <li>⏳ Delay between messages to avoid ban</li>
+                        </ul>
+                    </div>
+                    
+                    <form method="POST" class="mt-4">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-success btn-lg">
+                            <i class="fas fa-play me-2"></i>Process All ({{ pending_count }})
+                        </button>
+                    </form>
+                    
+                {% else %}
+                    <div class="mb-4">
+                        <i class="fas fa-check-circle text-success" style="font-size: 4rem;"></i>
+                    </div>
+                    <h4>All Done!</h4>
+                    <p class="text-muted">No pending leads to process. All leads have been messaged.</p>
+                    <a href="{% url 'dashboard' %}" class="btn btn-primary mt-3">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

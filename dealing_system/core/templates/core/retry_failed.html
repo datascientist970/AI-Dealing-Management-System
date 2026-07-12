@@ -1,0 +1,44 @@
+{% extends 'core/layouts/base.html' %}
+
+{% block page_icon %}refresh{% endblock %}
+{% block page_title %}Retry Failed Messages{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white py-3">
+                <h6 class="m-0 fw-bold text-primary">
+                    <i class="fas fa-refresh me-2"></i>Retry Failed Messages
+                </h6>
+            </div>
+            <div class="card-body text-center py-5">
+                {% if failed_count > 0 %}
+                    <div class="mb-4">
+                        <i class="fas fa-exclamation-triangle text-danger" style="font-size: 4rem;"></i>
+                    </div>
+                    <h4>{{ failed_count }} Failed Messages</h4>
+                    <p class="text-muted">These leads couldn't be reached. Retry sending WhatsApp messages.</p>
+                    
+                    <form method="POST" class="mt-4">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-warning btn-lg">
+                            <i class="fas fa-refresh me-2"></i>Retry All ({{ failed_count }})
+                        </button>
+                    </form>
+                    
+                {% else %}
+                    <div class="mb-4">
+                        <i class="fas fa-check-circle text-success" style="font-size: 4rem;"></i>
+                    </div>
+                    <h4>No Failed Messages</h4>
+                    <p class="text-muted">All messages sent successfully!</p>
+                    <a href="{% url 'dashboard' %}" class="btn btn-primary mt-3">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

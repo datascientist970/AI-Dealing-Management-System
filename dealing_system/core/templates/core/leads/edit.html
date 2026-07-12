@@ -1,0 +1,100 @@
+{% extends 'core/layouts/base.html' %}
+
+{% block page_icon %}edit{% endblock %}
+{% block page_title %}Edit Lead{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white py-3">
+                <h6 class="m-0 fw-bold text-primary">
+                    <i class="fas fa-edit me-2"></i>Edit Lead - {{ lead.name }}
+                </h6>
+            </div>
+            <div class="card-body">
+                <form method="POST" class="needs-validation" novalidate>
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Full Name <span class="text-danger">*</span></label>
+                            <input type="text" name="name" class="form-control form-control-lg" required value="{{ lead.name }}">
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Phone Number <span class="text-danger">*</span></label>
+                            <input type="tel" name="phone" class="form-control form-control-lg" required value="{{ lead.phone }}">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Email</label>
+                            <input type="email" name="email" class="form-control" value="{{ lead.email }}">
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Company</label>
+                            <input type="text" name="company" class="form-control" value="{{ lead.company }}">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Source</label>
+                            <select name="source" class="form-select">
+                                <option value="">Select source</option>
+                                <option value="Website" {% if lead.source == 'Website' %}selected{% endif %}>Website</option>
+                                <option value="Facebook" {% if lead.source == 'Facebook' %}selected{% endif %}>Facebook</option>
+                                <option value="LinkedIn" {% if lead.source == 'LinkedIn' %}selected{% endif %}>LinkedIn</option>
+                                <option value="WhatsApp" {% if lead.source == 'WhatsApp' %}selected{% endif %}>WhatsApp</option>
+                                <option value="Referral" {% if lead.source == 'Referral' %}selected{% endif %}>Referral</option>
+                                <option value="Cold Call" {% if lead.source == 'Cold Call' %}selected{% endif %}>Cold Call</option>
+                                <option value="Other" {% if lead.source == 'Other' %}selected{% endif %}>Other</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Status</label>
+                            <select name="status" class="form-select">
+                                <option value="new" {% if lead.status == 'new' %}selected{% endif %}>New Lead</option>
+                                <option value="contacted" {% if lead.status == 'contacted' %}selected{% endif %}>Contacted</option>
+                                <option value="qualified" {% if lead.status == 'qualified' %}selected{% endif %}>Qualified</option>
+                                <option value="converted" {% if lead.status == 'converted' %}selected{% endif %}>Converted</option>
+                                <option value="lost" {% if lead.status == 'lost' %}selected{% endif %}>Lost</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Notes</label>
+                        <textarea name="notes" class="form-control" rows="3">{{ lead.notes }}</textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Assign To</label>
+                        <select name="assigned_to" class="form-select">
+                            <option value="">Unassigned</option>
+                            {% for user in users %}
+                                <option value="{{ user.id }}" {% if lead.assigned_to.id == user.id %}selected{% endif %}>
+                                    {{ user.username }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg px-5">
+                            <i class="fas fa-save me-2"></i>Update Lead
+                        </button>
+                        <a href="{% url 'lead_detail' lead.id %}" class="btn btn-outline-secondary btn-lg px-5">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

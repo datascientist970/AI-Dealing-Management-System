@@ -1,0 +1,173 @@
+{% extends 'core/layouts/base.html' %}
+
+{% block page_icon %}calendar-day{% endblock %}
+{% block page_title %}Daily Report{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Today's Stats -->
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white py-3">
+                <h6 class="m-0 fw-bold text-primary">
+                    <i class="fas fa-chart-bar me-2"></i>Today's Performance
+                    <span class="badge bg-secondary ms-2">{{ today|date:"d M, Y" }}</span>
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-4">
+                        <div class="border-end">
+                            <h3 class="text-primary">{{ report.new_leads }}</h3>
+                            <small class="text-muted">New Leads</small>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="border-end">
+                            <h3 class="text-success">{{ report.interactions }}</h3>
+                            <small class="text-muted">Interactions</small>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <h3 class="text-warning">{{ report.conversions }}</h3>
+                        <small class="text-muted">Conversions</small>
+                    </div>
+                </div>
+                
+                {% if report.notes %}
+                <hr>
+                <div class="mt-3">
+                    <strong>Notes:</strong>
+                    <p class="bg-light p-2 rounded">{{ report.notes }}</p>
+                </div>
+                {% endif %}
+                
+                <hr>
+                <div class="mt-3">
+                    <a href="{% url 'export_report' %}?date={{ today|date:'Y-m-d' }}" class="btn btn-success">
+                        <i class="fas fa-file-excel me-2"></i>Export Report
+                    </a>
+                    <button class="btn btn-primary" onclick="window.print()">
+                        <i class="fas fa-print me-2"></i>Print
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Weekly Summary -->
+    <div class="col-lg-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white py-3">
+                <h6 class="m-0 fw-bold text-primary">
+                    <i class="fas fa-chart-line me-2"></i>Weekly Summary
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <canvas id="weeklyBarChart"></canvas>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between">
+                    <span>Total Leads:</span>
+                    <strong>{{ weekly_total_leads }}</strong>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span>Total Interactions:</span>
+                    <strong>{{ weekly_total_interactions }}</strong>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span>Conversions:</span>
+                    <strong>{{ weekly_conversions }}</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity -->
+<div class="card shadow-sm mt-4">
+    <div class="card-header bg-white py-3">
+        <h6 class="m-0 fw-bold text-primary">
+            <i class="fas fa-clock me-2"></i>Recent Activity
+        </h6>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-custom">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Lead</th>
+                        <th>Action</th>
+                        <th>Channel</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for interaction in recent_interactions %}
+                    <tr>
+                        <td>{{ interaction.created_at|timesince }} ago</td>
+                        <td>{{ interaction.lead.name }}</td>
+                        <td>
+                            {% if interaction.is_outgoing %}
+                                <span class="badge bg-primary">Outgoing</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Incoming</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ interaction.get_channel_display }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center text-muted">No recent activity</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+// Weekly Chart
+const ctx = document.getElementById('weeklyBarChart').getContext('2d');
+new Chart(ctx, {
+    type: 'bar',
+    data: {
+        labels: {{ week_labels|safe }},
+        datasets: [{
+            label: 'Leads',
+            data: {{ week_leads|safe }},
+            backgroundColor: 'rgba(78, 115, 223, 0.6)',
+            borderColor: '#4e73df',
+            borderWidth: 1
+        }, {
+            label: 'Interactions',
+            data: {{ week_interactions|safe }},
+            backgroundColor: 'rgba(28, 200, 138, 0.6)',
+            borderColor: '#1cc88a',
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'bottom',
+                labels: {
+                    boxWidth: 10
+                }
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 1
+                }
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

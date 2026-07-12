@@ -1,0 +1,162 @@
+{% extends 'core/layouts/base.html' %}
+
+{% block page_icon %}qrcode{% endblock %}
+{% block page_title %}WhatsApp Web Setup{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-sm fade-in">
+            <div class="card-header bg-white py-3">
+                <h6 class="m-0 fw-bold text-primary">
+                    <i class="fab fa-whatsapp me-2 text-success"></i>WhatsApp Web Setup
+                </h6>
+            </div>
+            <div class="card-body text-center py-4">
+                
+                <!-- Status Display -->
+                <div class="mb-4">
+                    {% if whatsapp_connected %}
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle me-2"></i>
+                            <strong>✅ WhatsApp Web is Connected!</strong>
+                            <p class="mb-0 mt-1">You can now send messages automatically.</p>
+                        </div>
+                        <a href="{% url 'dashboard' %}" class="btn btn-success btn-lg">
+                            <i class="fas fa-arrow-right me-2"></i>Go to Dashboard
+                        </a>
+                    {% else %}
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>⚠️ WhatsApp Web Not Connected</strong>
+                            <p class="mb-0 mt-1">Please follow the steps below to connect.</p>
+                        </div>
+                    {% endif %}
+                </div>
+                
+                {% if not whatsapp_connected %}
+                    <!-- QR Code Instructions -->
+                    <div class="mb-4">
+                        <i class="fab fa-whatsapp text-success" style="font-size: 4rem;"></i>
+                    </div>
+                    
+                    <h4 class="fw-bold">Connect WhatsApp Web</h4>
+                    <p class="text-muted">This is a ONE-TIME setup. After this, messages will be sent automatically.</p>
+                    
+                    <div class="row text-start mt-4">
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100 border-0 shadow-sm">
+                                <div class="card-body text-center">
+                                    <span class="badge bg-primary rounded-circle p-3 mb-2" style="font-size: 1.2rem;">1</span>
+                                    <h6>Open WhatsApp Web</h6>
+                                    <p class="small text-muted">Click the button below to open WhatsApp Web in a new tab</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100 border-0 shadow-sm">
+                                <div class="card-body text-center">
+                                    <span class="badge bg-success rounded-circle p-3 mb-2" style="font-size: 1.2rem;">2</span>
+                                    <h6>Scan QR Code</h6>
+                                    <p class="small text-muted">Open WhatsApp on your phone and scan the QR code</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100 border-0 shadow-sm">
+                                <div class="card-body text-center">
+                                    <span class="badge bg-info rounded-circle p-3 mb-2" style="font-size: 1.2rem;">3</span>
+                                    <h6>Verify Connection</h6>
+                                    <p class="small text-muted">Click "Check Connection" to verify and continue</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-warning mt-3">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Important:</strong>
+                        <ul class="text-start mt-2 mb-0">
+                            <li>Keep the browser tab <strong>OPEN</strong> while sending messages</li>
+                            <li>Your session will be saved for future use</li>
+                            <li>Make sure your phone has <strong>active internet</strong> connection</li>
+                            <li>Don't close the WhatsApp Web tab</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="mt-4 d-flex gap-3 justify-content-center flex-wrap">
+                        <form method="POST" class="d-inline" target="_blank">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="open_whatsapp">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="fas fa-external-link-alt me-2"></i>Open WhatsApp Web
+                            </button>
+                        </form>
+                        
+                        <button class="btn btn-primary btn-lg" id="checkBtn">
+                            <i class="fas fa-sync me-2"></i>Check Connection
+                        </button>
+                    </div>
+                    
+                    <!-- Status Message -->
+                    <div id="statusDiv" class="mt-4" style="display: none;">
+                        <div class="alert alert-info" id="statusAlert">
+                            <i class="fas fa-spinner fa-spin me-2"></i>
+                            <span id="statusText">Checking WhatsApp Web connection...</span>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('checkBtn')?.addEventListener('click', function() {
+    const statusDiv = document.getElementById('statusDiv');
+    const statusText = document.getElementById('statusText');
+    const alertDiv = document.getElementById('statusAlert');
+    
+    // Show status
+    statusDiv.style.display = 'block';
+    this.disabled = true;
+    this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Checking...';
+    
+    // Make AJAX call
+    fetch('/whatsapp/check-session/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.connected) {
+                alertDiv.className = 'alert alert-success';
+                statusText.innerHTML = '✅ WhatsApp Web is connected! Redirecting...';
+                setTimeout(() => {
+                    window.location.href = "{% url 'dashboard' %}";
+                }, 1500);
+            } else {
+                alertDiv.className = 'alert alert-warning';
+                statusText.innerHTML = '⚠️ Still not connected. Please scan the QR code and try again.';
+                this.disabled = false;
+                this.innerHTML = '<i class="fas fa-sync me-2"></i>Check Connection';
+            }
+        })
+        .catch(error => {
+            alertDiv.className = 'alert alert-danger';
+            statusText.innerHTML = '❌ Error checking connection. Please try again.';
+            this.disabled = false;
+            this.innerHTML = '<i class="fas fa-sync me-2"></i>Check Connection';
+            console.error('Error:', error);
+        });
+});
+
+// If form with open_whatsapp is submitted, show instructions
+document.querySelector('form[action*="open_whatsapp"]')?.addEventListener('submit', function() {
+    const statusDiv = document.getElementById('statusDiv');
+    const statusText = document.getElementById('statusText');
+    const alertDiv = document.getElementById('statusAlert');
+    
+    statusDiv.style.display = 'block';
+    alertDiv.className = 'alert alert-info';
+    statusText.innerHTML = '📱 WhatsApp Web opened! Please scan the QR code from your phone, then click "Check Connection".';
+});
+</script>
+{% endblock %}

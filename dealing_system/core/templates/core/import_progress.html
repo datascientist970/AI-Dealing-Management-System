@@ -1,0 +1,304 @@
+{% extends 'core/layouts/base.html' %}
+
+{% block page_icon %}spinner{% endblock %}
+{% block page_title %}Importing Leads...{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white py-3">
+                <h6 class="m-0 fw-bold text-primary">
+                    <i class="fas fa-file-import me-2"></i>Import Progress
+                    <span class="badge bg-secondary ms-2" id="fileName">{{ file_name }}</span>
+                </h6>
+            </div>
+            <div class="card-body">
+                <!-- Stats -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="stat-card text-center">
+                            <h6 class="text-muted">Total Leads</h6>
+                            <h3 class="fw-bold text-primary" id="totalLeads">0</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card text-center">
+                            <h6 class="text-muted">Processed</h6>
+                            <h3 class="fw-bold text-info" id="processedLeads">0</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card text-center">
+                            <h6 class="text-muted">Successful</h6>
+                            <h3 class="fw-bold text-success" id="successLeads">0</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card text-center">
+                            <h6 class="text-muted">Phone Numbers</h6>
+                            <h3 class="fw-bold text-warning" id="phoneCount">0</h3>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Progress Bar -->
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span id="progressText">Starting import...</span>
+                        <span id="progressPercent">0%</span>
+                    </div>
+                    <div class="progress" style="height: 25px;">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated bg-success" 
+                             id="progressBar" style="width: 0%;">
+                            0%
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Time & Speed -->
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <div class="bg-light p-2 rounded">
+                            <small class="text-muted">⏱️ Time Elapsed</small>
+                            <p class="fw-bold mb-0" id="timeElapsed">00:00</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="bg-light p-2 rounded">
+                            <small class="text-muted">⏳ Estimated Remaining</small>
+                            <p class="fw-bold mb-0" id="estimatedTime">Calculating...</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="bg-light p-2 rounded">
+                            <small class="text-muted">⚡ Speed</small>
+                            <p class="fw-bold mb-0" id="speedText">0 leads/sec</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Status Details -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <span class="badge bg-success" id="successBadge">✅ Imported: 0</span>
+                    </div>
+                    <div class="col-md-3">
+                        <span class="badge bg-danger" id="failedBadge">❌ Failed: 0</span>
+                    </div>
+                    <div class="col-md-3">
+                        <span class="badge bg-warning text-dark" id="skippedBadge">⏭️ Skipped: 0</span>
+                    </div>
+                    <div class="col-md-3">
+                        <span class="badge bg-secondary" id="duplicateBadge">📋 Duplicate: 0</span>
+                    </div>
+                </div>
+                
+                <!-- Live Log -->
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0">
+                            <i class="fas fa-terminal me-2"></i>Live Log
+                            <span class="badge bg-primary ms-2" id="logCount">0</span>
+                        </h6>
+                    </div>
+                    <div class="card-body p-0">
+                        <div id="logContainer" style="max-height: 300px; overflow-y: auto; background: #1e1e2e; color: #cdd6f4; font-family: 'Consolas', monospace; font-size: 13px; padding: 10px;">
+                            <div class="text-muted" style="color: #6c7086 !important;">⏳ Waiting for import to start...</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Action Buttons -->
+                <div class="mt-4 d-flex gap-2">
+                    <button class="btn btn-danger" id="cancelBtn" onclick="cancelImport()">
+                        <i class="fas fa-times me-2"></i>Cancel Import
+                    </button>
+                    <button class="btn btn-success" id="doneBtn" style="display: none;" onclick="window.location.href='{% url 'lead_list' %}'">
+                        <i class="fas fa-check me-2"></i>Done - Go to Leads
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const sessionId = '{{ session_id }}';
+let progressInterval = null;
+let startTime = Date.now();
+
+function updateProgress() {
+    fetch(`/imports/progress/${sessionId}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'not_found') {
+                clearInterval(progressInterval);
+                return;
+            }
+            
+            // Update stats
+            document.getElementById('totalLeads').textContent = data.total || 0;
+            document.getElementById('processedLeads').textContent = data.processed || 0;
+            document.getElementById('successLeads').textContent = data.success || 0;
+            document.getElementById('phoneCount').textContent = data.phone_count || 0;
+            
+            // Update progress bar
+            const progress = data.progress || 0;
+            document.getElementById('progressBar').style.width = progress + '%';
+            document.getElementById('progressBar').textContent = progress + '%';
+            document.getElementById('progressPercent').textContent = progress + '%';
+            
+            // Update progress text
+            if (data.status === 'processing') {
+                document.getElementById('progressText').textContent = `📊 Processing: ${data.current || '...'}`;
+            } else if (data.status === 'completed') {
+                document.getElementById('progressText').textContent = '✅ Import completed!';
+                document.getElementById('progressBar').className = 'progress-bar bg-success';
+            } else if (data.status === 'error') {
+                document.getElementById('progressText').textContent = '❌ ' + data.message;
+                document.getElementById('progressBar').className = 'progress-bar bg-danger';
+            }
+            
+            // Update badges
+            document.getElementById('successBadge').textContent = `✅ Imported: ${data.success || 0}`;
+            document.getElementById('failedBadge').textContent = `❌ Failed: ${data.failed || 0}`;
+            document.getElementById('skippedBadge').textContent = `⏭️ Skipped: ${data.skipped || 0}`;
+            document.getElementById('duplicateBadge').textContent = `📋 Duplicate: ${data.duplicate || 0}`;
+            
+            // Update time
+            if (data.start_time) {
+                const elapsed = Math.floor((Date.now() - new Date(data.start_time).getTime()) / 1000);
+                const minutes = Math.floor(elapsed / 60);
+                const seconds = elapsed % 60;
+                document.getElementById('timeElapsed').textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            }
+            
+            // Update estimated time
+            if (data.estimated_time_text) {
+                document.getElementById('estimatedTime').textContent = data.estimated_time_text;
+            }
+            
+            // Update speed
+            if (data.speed) {
+                document.getElementById('speedText').textContent = `${data.speed.toFixed(1)} leads/sec`;
+            }
+            
+            // Update log
+            if (data.logs && data.logs.length > 0) {
+                const logContainer = document.getElementById('logContainer');
+                const logCount = document.getElementById('logCount');
+                logCount.textContent = data.logs.length;
+                
+                // Only update if new logs
+                const currentLogs = logContainer.querySelectorAll('.log-entry').length;
+                if (data.logs.length > currentLogs) {
+                    const newLogs = data.logs.slice(currentLogs);
+                    newLogs.forEach(log => {
+                        const div = document.createElement('div');
+                        div.className = 'log-entry';
+                        
+                        let color = '#cdd6f4';
+                        let icon = '📝';
+                        if (log.status === 'success') {
+                            color = '#a6e3a1';
+                            icon = '✅';
+                        } else if (log.status === 'failed') {
+                            color = '#f38ba8';
+                            icon = '❌';
+                        } else if (log.status === 'skipped') {
+                            color = '#f9e2af';
+                            icon = '⏭️';
+                        }
+                        
+                        div.innerHTML = `
+                            <span style="color: #6c7086;">[${log.time}]</span>
+                            <span style="color: ${color};">${icon} ${log.lead}</span>
+                            ${log.phone ? `<span style="color: #89b4fa;">(${log.phone})</span>` : ''}
+                        `;
+                        div.style.padding = '2px 0';
+                        div.style.borderBottom = '1px solid #313244';
+                        logContainer.appendChild(div);
+                        
+                        // Auto scroll
+                        logContainer.scrollTop = logContainer.scrollHeight;
+                    });
+                }
+            }
+            
+            // Check if completed
+            if (data.status === 'completed' || data.status === 'error') {
+                clearInterval(progressInterval);
+                document.getElementById('doneBtn').style.display = 'inline-block';
+                document.getElementById('cancelBtn').disabled = true;
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching progress:', error);
+        });
+}
+
+function cancelImport() {
+    if (confirm('Are you sure you want to cancel this import?')) {
+        fetch(`/imports/cancel/${sessionId}/`)
+            .then(response => response.json())
+            .then(data => {
+                clearInterval(progressInterval);
+                window.location.href = "{% url 'import_leads' %}";
+            });
+    }
+}
+
+// Start progress updates
+progressInterval = setInterval(updateProgress, 1000);
+updateProgress();
+
+// Clean up on page unload
+window.addEventListener('beforeunload', function() {
+    if (progressInterval) {
+        clearInterval(progressInterval);
+    }
+});
+</script>
+
+<style>
+.stat-card {
+    background: white;
+    border-radius: 10px;
+    padding: 15px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    transition: transform 0.2s;
+}
+
+.stat-card:hover {
+    transform: translateY(-3px);
+}
+
+#logContainer::-webkit-scrollbar {
+    width: 6px;
+}
+
+#logContainer::-webkit-scrollbar-track {
+    background: #1e1e2e;
+}
+
+#logContainer::-webkit-scrollbar-thumb {
+    background: #313244;
+    border-radius: 3px;
+}
+
+#logContainer::-webkit-scrollbar-thumb:hover {
+    background: #45475a;
+}
+
+.progress {
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    transition: width 0.5s ease;
+    font-weight: 600;
+}
+</style>
+{% endblock %}

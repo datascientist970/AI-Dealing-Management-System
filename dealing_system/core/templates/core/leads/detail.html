@@ -1,0 +1,445 @@
+{% extends 'core/layouts/base.html' %}
+
+{% block page_icon %}user-circle{% endblock %}
+{% block page_title %}Lead Details{% endblock %}
+
+{% block content %}
+<div class="row fade-in">
+    <!-- Main Column -->
+    <div class="col-lg-8">
+        <!-- Lead Info Card -->
+        <div class="card shadow-sm">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <h6 class="m-0 fw-bold text-primary">
+                    <i class="fas fa-user me-2"></i>{{ lead.name }}
+                </h6>
+                <div class="d-flex gap-2 flex-wrap">
+                    <a href="{% url 'add_interaction' lead.id %}" class="btn btn-sm btn-success">
+                        <i class="fas fa-plus me-1"></i>Add Interaction
+                    </a>
+                    <a href="{% url 'edit_lead' lead.id %}" class="btn btn-sm btn-warning">
+                        <i class="fas fa-edit me-1"></i>Edit
+                    </a>
+                    <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                        <i class="fas fa-trash me-1"></i>Delete
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p>
+                            <strong><i class="fas fa-phone me-2 text-primary"></i>Phone:</strong>
+                            <span class="fw-bold">{{ lead.phone }}</span>
+                        </p>
+                        <p>
+                            <strong><i class="fas fa-envelope me-2 text-primary"></i>Email:</strong>
+                            {{ lead.email|default:"<span class='text-muted'>Not provided</span>"|safe }}
+                        </p>
+                        <p>
+                            <strong><i class="fas fa-building me-2 text-primary"></i>Company:</strong>
+                            {{ lead.company|default:"<span class='text-muted'>Not provided</span>"|safe }}
+                        </p>
+                        <p>
+                            <strong><i class="fas fa-tag me-2 text-primary"></i>Status:</strong>
+                            <span class="badge-status 
+                                {% if lead.status == 'new' %}bg-primary
+                                {% elif lead.status == 'contacted' %}bg-warning text-dark
+                                {% elif lead.status == 'qualified' %}bg-info
+                                {% elif lead.status == 'converted' %}bg-success
+                                {% else %}bg-secondary{% endif %}">
+                                {{ lead.get_status_display }}
+                            </span>
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <p>
+                            <strong><i class="fas fa-user-tie me-2 text-primary"></i>Assigned To:</strong>
+                            {{ lead.assigned_to.username|default:"<span class='text-muted'>Unassigned</span>"|safe }}
+                        </p>
+                        <p>
+                            <strong><i class="fas fa-calendar-plus me-2 text-primary"></i>Created:</strong>
+                            {{ lead.created_at|date:"d M, Y H:i" }}
+                        </p>
+                        <p>
+                            <strong><i class="fas fa-calendar-alt me-2 text-primary"></i>Last Updated:</strong>
+                            {{ lead.updated_at|date:"d M, Y H:i" }}
+                        </p>
+                        <p>
+                            <strong><i class="fas fa-comments me-2 text-primary"></i>Total Interactions:</strong>
+                            <span class="badge bg-primary rounded-pill">{{ interactions.count }}</span>
+                        </p>
+                    </div>
+                </div>
+                
+                {% if lead.notes %}
+                <div class="mt-3">
+                    <strong><i class="fas fa-sticky-note me-2 text-primary"></i>Notes:</strong>
+                    <p class="bg-light p-3 rounded border-start border-4 border-primary">{{ lead.notes }}</p>
+                </div>
+                {% endif %}
+                
+                <!-- Used Numbers -->
+                {% if used_numbers %}
+                <div class="mt-3">
+                    <strong><i class="fas fa-phone-alt me-2 text-primary"></i>Numbers Used:</strong>
+                    <div class="d-flex flex-wrap gap-2 mt-2">
+                        {% for num in used_numbers %}
+                            <span class="badge bg-info text-dark px-3 py-2">
+                                <i class="fas fa-phone me-1"></i> {{ num }}
+                            </span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Interactions -->
+        <div class="card shadow-sm mt-4">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h6 class="m-0 fw-bold text-primary">
+                    <i class="fas fa-comments me-2"></i>Interaction History
+                    <span class="badge bg-primary rounded-pill ms-2">{{ interactions.count }}</span>
+                </h6>
+                <a href="{% url 'add_interaction' lead.id %}" class="btn btn-sm btn-primary-custom">
+                    <i class="fas fa-plus me-1"></i>Add
+                </a>
+            </div>
+            <div class="card-body p-0">
+                {% for interaction in interactions %}
+                <div class="p-3 border-bottom">
+                    <div class="d-flex justify-content-between align-items-start flex-wrap">
+                        <div>
+                            <span class="badge {% if interaction.is_outgoing %}bg-primary{% else %}bg-secondary{% endif %}">
+                                {% if interaction.is_outgoing %}
+                                    <i class="fas fa-arrow-right"></i> Outgoing
+                                {% else %}
+                                    <i class="fas fa-arrow-left"></i> Incoming
+                                {% endif %}
+                            </span>
+                            <span class="badge bg-info text-dark">{{ interaction.get_channel_display }}</span>
+                            <span class="badge bg-dark">
+                                <i class="fas fa-phone me-1"></i> {{ interaction.phone_number_used }}
+                            </span>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <small class="text-muted">{{ interaction.created_at|timesince }} ago</small>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteInteraction({{ interaction.id }})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <div class="bg-light p-3 rounded mb-2">
+                            <strong><i class="fas fa-envelope me-2 text-primary"></i>Message:</strong>
+                            <p class="mb-0 mt-1">{{ interaction.message }}</p>
+                        </div>
+                        {% if interaction.response %}
+                        <div class="bg-success bg-opacity-10 p-3 rounded border-start border-4 border-success">
+                            <strong><i class="fas fa-reply me-2 text-success"></i>Response:</strong>
+                            <p class="mb-0 mt-1">{{ interaction.response }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center text-muted py-5">
+                    <i class="fas fa-comment-slash fa-3x mb-3"></i>
+                    <p>No interactions recorded yet.</p>
+                    <a href="{% url 'add_interaction' lead.id %}" class="btn btn-primary-custom">
+                        <i class="fas fa-plus me-1"></i>Add First Interaction
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Gemini AI Card -->
+        <div class="card shadow-sm mb-4" style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); color: white; border: none;">
+            <div class="card-body">
+                <h6 class="fw-bold">
+                    <i class="fas fa-brain me-2"></i>Gemini AI Assistant
+                    <span class="badge bg-info ms-2" style="font-size: 0.6rem;">Powered by Google</span>
+                </h6>
+                <hr style="border-color: rgba(255,255,255,0.15);">
+                
+                <!-- AI Message -->
+                <div class="mb-3">
+                    <small class="text-white-50"><i class="fas fa-comment me-1"></i> Suggested Message</small>
+                    <div class="bg-white bg-opacity-10 p-3 rounded" style="font-size: 0.9rem;">
+                        <p class="mb-0">{{ ai_suggestion.message|default:"Hello! How can I help you today?" }}</p>
+                    </div>
+                    <button class="btn btn-outline-light btn-sm w-100 mt-2" onclick="copyMessage()">
+                        <i class="fas fa-copy me-1"></i> Copy Message
+                    </button>
+                </div>
+                
+                <!-- Best Time -->
+                <div class="mb-2">
+                    <small class="text-white-50"><i class="fas fa-clock me-1"></i> Best Time to Contact</small>
+                    <div class="bg-white bg-opacity-10 p-2 rounded" style="font-size: 0.85rem;">
+                        {{ ai_suggestion.best_time|default:"Morning hours (10 AM - 12 PM)" }}
+                    </div>
+                </div>
+                
+                <!-- Next Step -->
+                <div class="mb-2">
+                    <small class="text-white-50"><i class="fas fa-arrow-right me-1"></i> Next Step</small>
+                    <div class="bg-white bg-opacity-10 p-2 rounded" style="font-size: 0.85rem;">
+                        {{ ai_suggestion.next_step|default:"Schedule a follow-up call" }}
+                    </div>
+                </div>
+                
+                <!-- Best Number -->
+                <div class="mb-2">
+                    <small class="text-white-50"><i class="fas fa-phone me-1"></i> Best Number to Use</small>
+                    <div class="bg-white bg-opacity-10 p-2 rounded" style="font-size: 0.85rem;">
+                        {{ ai_suggestion.best_number|default:best_number }}
+                    </div>
+                </div>
+                
+                <!-- Conversion Probability -->
+                <div class="mb-2">
+                    <small class="text-white-50"><i class="fas fa-chart-line me-1"></i> Conversion Probability</small>
+                    <div class="bg-white bg-opacity-10 p-2 rounded">
+                        <div class="d-flex align-items-center">
+                            <span class="me-2" style="font-size: 0.85rem;">
+                                {{ ai_suggestion.conversion_probability|default:"Medium" }}
+                            </span>
+                            <div class="progress flex-grow-1" style="height: 6px;">
+                                {% with prob=ai_suggestion.conversion_probability|default:"Medium" %}
+                                    {% if prob == "High" or prob == "high" %}
+                                        <div class="progress-bar bg-success" style="width: 80%"></div>
+                                    {% elif prob == "Medium" or prob == "medium" %}
+                                        <div class="progress-bar bg-warning" style="width: 50%"></div>
+                                    {% else %}
+                                        <div class="progress-bar bg-danger" style="width: 30%"></div>
+                                    {% endif %}
+                                {% endwith %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tips -->
+                <div class="mb-2">
+                    <small class="text-white-50"><i class="fas fa-lightbulb me-1"></i> Tips</small>
+                    <div class="bg-white bg-opacity-10 p-2 rounded" style="font-size: 0.85rem;">
+                        {{ ai_suggestion.tips|default:"Build rapport and understand their needs" }}
+                    </div>
+                </div>
+                
+                <!-- Email Content -->
+                <div class="mt-3">
+                    <button class="btn btn-outline-light btn-sm w-100" onclick="toggleEmail()">
+                        <i class="fas fa-envelope me-1"></i> Show Email Template
+                    </button>
+                    <div id="emailContentDiv" style="display: none;" class="mt-2">
+                        <div class="bg-white bg-opacity-10 p-3 rounded" style="font-size: 0.8rem; white-space: pre-wrap; max-height: 200px; overflow-y: auto;">
+                            {{ email_content|default:"No email template available" }}
+                        </div>
+                        <button class="btn btn-outline-light btn-sm w-100 mt-2" onclick="copyEmail()">
+                            <i class="fas fa-copy me-1"></i> Copy Email
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Follow-ups -->
+        <div class="card shadow-sm">
+            <div class="card-header bg-white py-3">
+                <h6 class="m-0 fw-bold text-primary">
+                    <i class="fas fa-bell me-2"></i>Follow-ups
+                    <span class="badge bg-warning rounded-pill ms-2">{{ followups.count }}</span>
+                </h6>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{% url 'add_followup' lead.id %}" class="mb-3">
+                    {% csrf_token %}
+                    <div class="mb-2">
+                        <label class="form-label small fw-bold">Reminder Date</label>
+                        <input type="datetime-local" name="reminder_date" class="form-control form-control-sm" required>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small fw-bold">Note</label>
+                        <textarea name="note" class="form-control form-control-sm" rows="2" placeholder="Add note..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary-custom btn-sm w-100">
+                        <i class="fas fa-plus me-1"></i>Add Reminder
+                    </button>
+                </form>
+                
+                <hr>
+                
+                {% for followup in followups %}
+                    <div class="d-flex justify-content-between align-items-center p-2 border-bottom">
+                        <div>
+                            <small class="text-muted">{{ followup.reminder_date|date:"d M, Y H:i" }}</small>
+                            <p class="mb-0 small">{{ followup.note|default:"No note" }}</p>
+                        </div>
+                        <form method="POST" action="{% url 'complete_followup' followup.id %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-success" title="Mark as complete">
+                                <i class="fas fa-check"></i>
+                            </button>
+                        </form>
+                    </div>
+                {% empty %}
+                    <div class="text-center text-muted py-3">
+                        <i class="fas fa-check-circle text-success fa-2x mb-2"></i>
+                        <p class="mb-0">No pending follow-ups</p>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Confirm Delete
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete <strong>{{ lead.name }}</strong>?</p>
+                <p class="text-danger small">⚠️ This will also delete all interactions and follow-ups for this lead.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <a href="{% url 'delete_lead' lead.id %}" class="btn btn-danger">
+                    <i class="fas fa-trash me-1"></i>Delete Permanently
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden Content for Copy -->
+<textarea id="messageContent" style="display:none;">{{ ai_suggestion.message|default:"Hello! How can I help you today?" }}</textarea>
+<textarea id="emailContent" style="display:none;">{{ email_content|default:"No email template available" }}</textarea>
+
+<script>
+// Copy Message
+function copyMessage() {
+    const content = document.getElementById('messageContent').value;
+    navigator.clipboard.writeText(content).then(() => {
+        showToast('Message copied to clipboard!', 'success');
+    }).catch(() => {
+        showToast('Failed to copy message', 'error');
+    });
+}
+
+// Copy Email
+function copyEmail() {
+    const content = document.getElementById('emailContent').value;
+    navigator.clipboard.writeText(content).then(() => {
+        showToast('Email template copied to clipboard!', 'success');
+    }).catch(() => {
+        showToast('Failed to copy email', 'error');
+    });
+}
+
+// Toggle Email Display
+function toggleEmail() {
+    const div = document.getElementById('emailContentDiv');
+    if (div.style.display === 'none') {
+        div.style.display = 'block';
+    } else {
+        div.style.display = 'none';
+    }
+}
+
+// Delete Interaction
+function deleteInteraction(id) {
+    if (confirm('Are you sure you want to delete this interaction?')) {
+        window.location.href = "{% url 'delete_interaction' 0 %}".replace('0', id);
+    }
+}
+
+// Toast Notification
+function showToast(message, type) {
+    const toast = document.createElement('div');
+    toast.className = `alert alert-${type} alert-dismissible fade show position-fixed top-0 end-0 m-3`;
+    toast.style.zIndex = '9999';
+    toast.style.maxWidth = '400px';
+    toast.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.transition = 'opacity 0.5s';
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 500);
+    }, 3000);
+}
+
+// Auto-refresh on status change
+document.addEventListener('DOMContentLoaded', function() {
+    // Add any auto-refresh logic if needed
+});
+</script>
+
+<style>
+/* Card hover effects */
+.card {
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    box-shadow: 0 5px 20px rgba(0,0,0,0.08) !important;
+}
+
+/* Gemini AI card */
+.gemini-card {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+}
+
+/* Badge styles */
+.badge-status {
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-weight: 500;
+    font-size: 0.8rem;
+}
+
+/* Interaction styling */
+.interaction-message {
+    background: #f8f9fc;
+    border-radius: 10px;
+    padding: 1rem;
+}
+
+.interaction-response {
+    background: #d4edda;
+    border-radius: 10px;
+    padding: 1rem;
+    border-left: 4px solid #28a745;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .card-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+    }
+    
+    .card-header .d-flex {
+        flex-wrap: wrap;
+    }
+}
+</style>
+{% endblock %}

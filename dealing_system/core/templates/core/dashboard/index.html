@@ -1,0 +1,209 @@
+{% extends 'core/layouts/base.html' %}
+
+{% block page_icon %}chart-pie{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Statistics Cards -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stat-card">
+            <div class="stat-icon" style="background: rgba(78, 115, 223, 0.1); color: #4e73df;">
+                <i class="fas fa-users"></i>
+            </div>
+            <p class="stat-label">Total Leads</p>
+            <h3 class="stat-number">{{ total_leads }}</h3>
+            <small class="text-success">
+                <i class="fas fa-arrow-up"></i> {{ new_leads_today }} new today
+            </small>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stat-card">
+            <div class="stat-icon" style="background: rgba(28, 200, 138, 0.1); color: #1cc88a;">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <p class="stat-label">Converted</p>
+            <h3 class="stat-number">{{ converted_total }}</h3>
+            <small class="text-success">
+                <i class="fas fa-arrow-up"></i> {{ converted_today }} today
+            </small>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stat-card">
+            <div class="stat-icon" style="background: rgba(246, 194, 62, 0.1); color: #f6c23e;">
+                <i class="fas fa-clock"></i>
+            </div>
+            <p class="stat-label">Pending Follow-ups</p>
+            <h3 class="stat-number">{{ pending_followups }}</h3>
+            <small class="text-warning">Need attention today</small>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stat-card">
+            <div class="stat-icon" style="background: rgba(231, 74, 59, 0.1); color: #e74a3b;">
+                <i class="fas fa-phone"></i>
+            </div>
+            <p class="stat-label">Interactions</p>
+            <h3 class="stat-number">{{ total_interactions }}</h3>
+            <small class="text-primary">
+                <i class="fas fa-arrow-up"></i> {{ interactions_today }} today
+            </small>
+        </div>
+    </div>
+</div>
+
+<!-- AI Insights & Charts -->
+<div class="row">
+    <!-- AI Suggestions -->
+    <div class="col-lg-6 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white py-3">
+                <h6 class="m-0 fw-bold text-primary">
+                    <i class="fas fa-brain me-2"></i>AI Insights
+                </h6>
+            </div>
+            <div class="card-body">
+                {% for suggestion in ai_suggestions %}
+                    <div class="ai-suggestion">
+                        <i class="fas fa-lightbulb"></i>
+                        {{ suggestion }}
+                    </div>
+                {% empty %}
+                    <div class="text-center text-muted py-3">
+                        <i class="fas fa-check-circle text-success fa-2x mb-2"></i>
+                        <p>All leads are on track! Great job! 🎉</p>
+                    </div>
+                {% endfor %}
+                
+                {% if critical_leads %}
+                    <div class="mt-3">
+                        <h6 class="text-danger">
+                            <i class="fas fa-exclamation-triangle"></i> Leads Needing Urgent Attention
+                        </h6>
+                        {% for lead in critical_leads %}
+                            <div class="d-flex justify-content-between align-items-center p-2 border-bottom">
+                                <span>{{ lead.name }}</span>
+                                <span class="badge bg-danger">No contact for {{ lead.days_inactive }} days</span>
+                                <a href="{% url 'lead_detail' lead.id %}" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Chart -->
+    <div class="col-lg-6 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white py-3">
+                <h6 class="m-0 fw-bold text-primary">
+                    <i class="fas fa-chart-line me-2"></i>Weekly Activity
+                </h6>
+            </div>
+            <div class="card-body">
+                <canvas id="weeklyChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Leads -->
+<div class="card shadow-sm">
+    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <h6 class="m-0 fw-bold text-primary">
+            <i class="fas fa-history me-2"></i>Recent Leads
+        </h6>
+        <a href="{% url 'lead_list' %}" class="btn btn-sm btn-outline-primary">View All</a>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-custom mb-0">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Phone</th>
+                        <th>Status</th>
+                        <th>Assigned To</th>
+                        <th>Created</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for lead in recent_leads %}
+                    <tr>
+                        <td><strong>{{ lead.name }}</strong></td>
+                        <td>{{ lead.phone }}</td>
+                        <td>
+                            <span class="badge-status 
+                                {% if lead.status == 'new' %}bg-primary
+                                {% elif lead.status == 'contacted' %}bg-warning
+                                {% elif lead.status == 'qualified' %}bg-info
+                                {% elif lead.status == 'converted' %}bg-success
+                                {% else %}bg-secondary{% endif %}">
+                                {{ lead.get_status_display }}
+                            </span>
+                        </td>
+                        <td>{{ lead.assigned_to.username|default:"Unassigned" }}</td>
+                        <td>{{ lead.created_at|date:"d M, Y" }}</td>
+                        <td>
+                            <a href="{% url 'lead_detail' lead.id %}" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-3 text-muted">
+                            <i class="fas fa-inbox fa-2x mb-2"></i>
+                            <p>No leads found. Add your first lead!</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Chart
+    const ctx = document.getElementById('weeklyChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: {{ chart_labels|safe }},
+            datasets: [{
+                label: 'Leads',
+                data: {{ chart_leads|safe }},
+                borderColor: '#4e73df',
+                backgroundColor: 'rgba(78, 115, 223, 0.1)',
+                fill: true,
+                tension: 0.4
+            }, {
+                label: 'Interactions',
+                data: {{ chart_interactions|safe }},
+                borderColor: '#1cc88a',
+                backgroundColor: 'rgba(28, 200, 138, 0.1)',
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

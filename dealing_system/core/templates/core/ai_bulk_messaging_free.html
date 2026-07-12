@@ -1,0 +1,369 @@
+{% extends 'core/layouts/base.html' %}
+
+{% block page_icon %}robot{% endblock %}
+{% block page_title %}Free AI Bulk Messaging{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white py-3">
+                <h6 class="m-0 fw-bold text-primary">
+                    <i class="fas fa-robot me-2"></i>Free AI Bulk Messaging
+                    <span class="badge bg-success ms-2">100% Free</span>
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>How it works:</strong>
+                    <ul class="mb-0 mt-2">
+                        <li>📱 Uses WhatsApp Web (No Twilio required)</li>
+                        <li>🤖 AI generates personalized messages for each lead</li>
+                        <li>⏰ Random delays to avoid detection</li>
+                        <li>💯 Completely FREE!</li>
+                    </ul>
+                </div>
+                
+                <form method="POST" id="bulkForm">
+                    {% csrf_token %}
+                    
+                    <!-- Select Leads -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Select Leads for Bulk Messaging</label>
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th><input type="checkbox" id="selectAll"></th>
+                                        <th>Name</th>
+                                        <th>Phone</th>
+                                        <th>Status</th>
+                                        <th>AI Message Preview</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for lead in leads %}
+                                    <tr>
+                                        <td>
+                                            <input type="checkbox" name="lead_ids" value="{{ lead.id }}" class="lead-checkbox">
+                                        </td>
+                                        <td>{{ lead.name }}</td>
+                                        <td>{{ lead.phone }}</td>
+                                        <td>
+                                            <span class="badge-status 
+                                                {% if lead.status == 'new' %}bg-primary
+                                                {% elif lead.status == 'contacted' %}bg-warning
+                                                {% elif lead.status == 'qualified' %}bg-info
+                                                {% elif lead.status == 'converted' %}bg-success
+                                                {% else %}bg-secondary{% endif %}">
+                                                {{ lead.get_status_display }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <button type="button" class="btn btn-sm btn-outline-primary generate-ai-btn" 
+                                                    data-lead-id="{{ lead.id }}">
+                                                <i class="fas fa-brain"></i> Generate AI
+                                            </button>
+                                            <span id="ai_preview_{{ lead.id }}" class="ms-2 text-muted small"></span>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="5" class="text-center py-3">
+                                            <i class="fas fa-inbox fa-2x mb-2"></i>
+                                            <p>No leads found. Add some leads first!</p>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Message Template -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Message Template</label>
+                        <div class="form-check mb-2">
+                            <input type="radio" name="message_type" value="ai" id="aiType" checked>
+                            <label for="aiType" class="form-check-label">
+                                <i class="fas fa-brain text-primary"></i> AI Generated (Personalized for each lead)
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input type="radio" name="message_type" value="template" id="templateType">
+                            <label for="templateType" class="form-check-label">
+                                <i class="fas fa-file-alt text-success"></i> Template (Same for all)
+                            </label>
+                        </div>
+                        <div id="templateDiv" style="display: none;">
+                            <textarea name="template_message" class="form-control" rows="3" 
+                                      placeholder="Enter your message here... Use {name}, {phone}, {company} for personalization"></textarea>
+                            <small class="text-muted">Use {name}, {phone}, {company} to personalize</small>
+                        </div>
+                    </div>
+                    
+                    <!-- Sending Options -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Delay Between Messages</label>
+                                <select name="delay" class="form-select">
+                                    <option value="30">30 seconds (Fast)</option>
+                                    <option value="60" selected>60 seconds (Recommended)</option>
+                                    <option value="90">90 seconds (Safe)</option>
+                                    <option value="120">120 seconds (Very Safe)</option>
+                                </select>
+                                <small class="text-muted">Higher delay = Lower chance of WhatsApp ban</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Send Time</label>
+                                <select name="send_time" class="form-select">
+                                    <option value="now">Send Now</option>
+                                    <option value="later">Schedule for Later</option>
+                                </select>
+                                <div id="scheduleDiv" style="display: none;" class="mt-2">
+                                    <input type="time" name="schedule_time" class="form-control">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button type="submit" class="btn btn-success-custom" id="sendBtn">
+                            <i class="fab fa-whatsapp me-2"></i> Send Messages
+                        </button>
+                        <button type="button" class="btn btn-primary-custom" id="generateBulkBtn">
+                            <i class="fas fa-robot me-2"></i> Generate AI for All
+                        </button>
+                        <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times me-2"></i> Cancel
+                        </a>
+                    </div>
+                </form>
+                
+                <!-- Progress -->
+                <div id="progressDiv" class="mt-4" style="display: none;">
+                    <div class="card">
+                        <div class="card-body">
+                            <h6><i class="fas fa-spinner fa-spin me-2"></i> Generating AI Messages...</h6>
+                            <div class="progress">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                     style="width: 0%" id="progressBar">0%</div>
+                            </div>
+                            <p class="mt-2 text-muted" id="progressText">Preparing...</p>
+                            <div id="progressDetails" class="mt-2"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Stats -->
+        <div class="row mt-4">
+            <div class="col-md-4">
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: rgba(78, 115, 223, 0.1); color: #4e73df;">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <p class="stat-label">Total Leads</p>
+                    <h3 class="stat-number">{{ total_leads }}</h3>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: rgba(28, 200, 138, 0.1); color: #1cc88a;">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <p class="stat-label">AI Ready</p>
+                    <h3 class="stat-number">{{ ai_ready|default:"0" }}</h3>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: rgba(37, 211, 102, 0.1); color: #25d366;">
+                        <i class="fab fa-whatsapp"></i>
+                    </div>
+                    <p class="stat-label">WhatsApp Status</p>
+                    <h3 class="stat-number">
+                        {% if whatsapp_connected %}
+                            <span class="text-success">✅ Connected</span>
+                        {% else %}
+                            <span class="text-danger">⚠️ Not Connected</span>
+                        {% endif %}
+                    </h3>
+                    <small>
+                        {% if not whatsapp_connected %}
+                            <a href="{% url 'confirm_whatsapp' %}">Click here to connect</a>
+                        {% endif %}
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ===== Select/Deselect all =====
+document.getElementById('selectAll')?.addEventListener('change', function() {
+    document.querySelectorAll('.lead-checkbox').forEach(cb => cb.checked = this.checked);
+});
+
+// ===== Show/hide template =====
+document.querySelectorAll('input[name="message_type"]').forEach(function(radio) {
+    radio.addEventListener('change', function() {
+        document.getElementById('templateDiv').style.display = 
+            document.getElementById('templateType').checked ? 'block' : 'none';
+    });
+});
+
+// ===== Show/hide schedule =====
+document.querySelector('select[name="send_time"]')?.addEventListener('change', function() {
+    document.getElementById('scheduleDiv').style.display = 
+        this.value === 'later' ? 'block' : 'none';
+});
+
+// ===== Generate AI for single lead =====
+document.querySelectorAll('.generate-ai-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        const leadId = this.dataset.leadId;
+        const preview = document.getElementById('ai_preview_' + leadId);
+        
+        preview.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+        this.disabled = true;
+        
+        fetch('/ai/generate-message/' + leadId + '/')
+            .then(response => response.json())
+            .then(data => {
+                preview.innerHTML = data.message.substring(0, 50) + '...';
+                this.disabled = false;
+            })
+            .catch(() => {
+                preview.innerHTML = '❌ Failed';
+                this.disabled = false;
+            });
+    });
+});
+
+// ===== Generate AI for all selected leads =====
+document.getElementById('generateBulkBtn')?.addEventListener('click', function() {
+    const selected = document.querySelectorAll('.lead-checkbox:checked');
+    
+    if (selected.length === 0) {
+        alert('Please select at least one lead');
+        return;
+    }
+    
+    const leadIds = Array.from(selected).map(cb => cb.value);
+    const total = leadIds.length;
+    let completed = 0;
+    let failed = 0;
+    
+    // Show progress
+    const progressDiv = document.getElementById('progressDiv');
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+    const progressDetails = document.getElementById('progressDetails');
+    
+    progressDiv.style.display = 'block';
+    progressBar.style.width = '0%';
+    progressText.textContent = `Generating AI messages for ${total} leads...`;
+    progressDetails.innerHTML = '';
+    
+    this.disabled = true;
+    this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Generating...';
+    
+    // Process each lead
+    leadIds.forEach((id, index) => {
+        const preview = document.getElementById('ai_preview_' + id);
+        preview.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        
+        fetch('/ai/generate-message/' + id + '/')
+            .then(response => response.json())
+            .then(data => {
+                completed++;
+                
+                // Update progress
+                const progress = Math.round((completed / total) * 100);
+                progressBar.style.width = progress + '%';
+                progressBar.textContent = progress + '%';
+                progressText.textContent = `Generated ${completed} of ${total} messages`;
+                
+                // Show success/failure
+                if (data.message) {
+                    preview.innerHTML = data.message.substring(0, 50) + '...';
+                    progressDetails.innerHTML += `
+                        <div class="text-success small">
+                            ✅ ${index + 1}. ${data.name || 'Lead'} - Message generated
+                        </div>
+                    `;
+                } else {
+                    preview.innerHTML = '❌ Failed';
+                    failed++;
+                    progressDetails.innerHTML += `
+                        <div class="text-danger small">
+                            ❌ ${index + 1}. Failed to generate message
+                        </div>
+                    `;
+                }
+                
+                // Check if all done
+                if (completed === total) {
+                    progressText.textContent = `✅ All ${total} messages generated! ${failed > 0 ? failed + ' failed' : ''}`;
+                    progressBar.className = 'progress-bar bg-success';
+                    
+                    document.getElementById('generateBulkBtn').disabled = false;
+                    document.getElementById('generateBulkBtn').innerHTML = '<i class="fas fa-robot me-2"></i> Generate AI for All';
+                    
+                    if (failed === 0) {
+                        progressDetails.innerHTML += `
+                            <div class="text-success mt-2">
+                                🎉 All messages generated successfully! Click "Send Messages" to send.
+                            </div>
+                        `;
+                    }
+                }
+            })
+            .catch(error => {
+                completed++;
+                failed++;
+                preview.innerHTML = '❌ Error';
+                
+                const progress = Math.round((completed / total) * 100);
+                progressBar.style.width = progress + '%';
+                progressBar.textContent = progress + '%';
+                progressText.textContent = `Generated ${completed} of ${total} messages (${failed} failed)`;
+                
+                progressDetails.innerHTML += `
+                    <div class="text-danger small">
+                        ❌ ${index + 1}. Error: ${error.message || 'Unknown error'}
+                    </div>
+                `;
+                
+                if (completed === total) {
+                    progressText.textContent = `⚠️ ${total} messages processed. ${failed} failed.`;
+                    document.getElementById('generateBulkBtn').disabled = false;
+                    document.getElementById('generateBulkBtn').innerHTML = '<i class="fas fa-robot me-2"></i> Generate AI for All';
+                }
+            });
+    });
+});
+
+// ===== Show progress when form is submitted =====
+document.getElementById('bulkForm')?.addEventListener('submit', function() {
+    const progressDiv = document.getElementById('progressDiv');
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+    
+    progressDiv.style.display = 'block';
+    progressBar.style.width = '100%';
+    progressBar.className = 'progress-bar progress-bar-striped progress-bar-animated bg-success';
+    progressText.textContent = '📱 Sending messages... Please wait.';
+    
+    document.getElementById('sendBtn').disabled = true;
+    document.getElementById('sendBtn').innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Sending...';
+});
+</script>
+{% endblock %}
